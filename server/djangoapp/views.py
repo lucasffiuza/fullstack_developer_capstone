@@ -13,8 +13,8 @@ from django.contrib.auth import login, authenticate
 import logging
 import json
 from django.views.decorators.csrf import csrf_exempt
-# from .populate import initiate
-
+from .populate import initiate
+from .models import CarMake, CarModel
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -80,6 +80,31 @@ def registration(request):
     else :
         data = {"userName":username,"error":"Already Registered"}
         return JsonResponse(data)
+
+def get_cars(request):
+    try:
+        # Check if we need to populate
+        car_make_count = CarMake.objects.count()
+        car_model_count = CarModel.objects.count()
+        print(f"CarMake count: {car_make_count}, CarModel count: {car_model_count}")
+        
+        if(car_make_count == 0 or car_model_count == 0):
+            initiate()
+        
+        # Fetch all car models with their related car makes
+        car_models = CarModel.objects.select_related('car_make').all()
+        cars = []
+        for car_model in car_models:
+            cars.append({
+                "CarModel": car_model.name, 
+                "CarMake": car_model.car_make.name
+            })
+        return JsonResponse({"CarModels": cars})
+    except Exception as e:
+        logger.error(f"Error in get_cars: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 # # Update the `get_dealerships` view to render the index page with
 # a list of dealerships
 # def get_dealerships(request):
